@@ -18,7 +18,7 @@ async def send_async_request(question, answer, history):
     timeout = aiohttp.ClientTimeout(total=1)
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            await session.get(url, params=params)
+            await session.post(url, json=params)
     except asyncio.TimeoutError:
         pass
 
