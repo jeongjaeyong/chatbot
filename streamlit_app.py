@@ -52,7 +52,7 @@ else:
             st.markdown(prompt)
 
         stream = client.chat.completions.create(
-            model="gpt-4-o",
+            model="gpt-4o-2024-08-06",
             messages=st.session_state.messages,
             stream=True,
         )
