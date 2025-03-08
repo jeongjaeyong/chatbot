@@ -4,54 +4,57 @@ import os
 
 # Show title and description.
 st.title("💬 Chatbot")
-st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
-)
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = os.getenv("OPENAI_API_KEY") #st.text_input("OpenAI API Key", type="password")
+
+# Select language
+language = st.selectbox("Choose your language:", ["English", "한국어", "Español", "中文", "日本語", "ภาษาไทย", "Tiếng Việt", "Bahasa Indonesia"])
+
+system_prompt = f"""You are an AI that recommends good products to users. 
+The product information you have is provided in Korean, but please answer in the given language. 
+And recommend the appropriate product that fits the user's situation.
+
+
+제품 리스트 :
+Title    / detail    /price
+올인원 스킨    / 귀찮음이 많은 남자를 위한 제품    / 20,000 (Korean won)
+촉촉 스킨    / 건조한 피부를 위한 보습 스킨    / 30,000 (Korean won)
+상쾌 스킨    / 지성 피부를 위한 스킨    / 10,000 (Korean won)
+베이비 스킨    / 예민한 피부를 위한 보습 스킨    / 40,000 (Korean won)
+
+
+답변 언어 : {language}
+"""
+# Ask user for their OpenAI API key.
+openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-
-    # Create an OpenAI client.
     client = OpenAI(api_key=openai_api_key)
 
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
+    # 언어가 변경되었을 때 시스템 프롬프트 업데이트
+    if st.session_state.messages[0]["content"] != system_prompt:
+        st.session_state.messages = [{"role": "system", "content": system_prompt}]
+    
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        st.session_state.messages = [{"role": "system", "content": system_prompt}]
 
-    # Display the existing chat messages via `st.chat_message`.
-    for message in st.session_state.messages:
+    # Display the existing chat messages.
+    for message in st.session_state.messages[1:]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
-
-        # Store and display the current prompt.
+    # Chat input field
+    if prompt := st.chat_input("Enter your message:"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate a response using the OpenAI API.
         stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
+            model="gpt-4-o",
+            messages=st.session_state.messages,
             stream=True,
         )
 
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
         with st.chat_message("assistant"):
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
