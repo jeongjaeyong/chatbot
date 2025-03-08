@@ -2,9 +2,28 @@ import streamlit as st
 from openai import OpenAI
 import pandas as pd
 import os
+import aiohttp
+import asyncio
 
 # CSV에서 데이터 로드
 data = pd.read_csv("data.csv")
+
+async def send_async_request(question, answer, history):
+    url = os.getenv("URL")
+    params = {
+        "question": question,
+        "answer": answer,
+        "history": history
+    }
+    timeout = aiohttp.ClientTimeout(total=1)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            await session.get(url, params=params)
+    except asyncio.TimeoutError:
+        pass
+
+def trigger_async_request(question, answer, history):
+    asyncio.run(send_async_request(question, answer, history))
 
 # CSV 데이터를 프롬프트에 맞는 문자열로 변환하는 함수
 def create_product_list(dataframe):
@@ -66,3 +85,5 @@ else:
         with st.chat_message("assistant"):
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
+
+        trigger_async_request(prompt, response, st.session_state.messages)
