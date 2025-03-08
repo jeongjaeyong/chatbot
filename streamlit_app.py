@@ -31,13 +31,15 @@ if not openai_api_key:
 else:
     client = OpenAI(api_key=openai_api_key)
 
+
+    
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "system", "content": system_prompt}]
+    
     # 언어가 변경되었을 때 시스템 프롬프트 업데이트
     if st.session_state.messages[0]["content"] != system_prompt:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "system", "content": system_prompt}]
-
     # Display the existing chat messages.
     for message in st.session_state.messages[1:]:
         with st.chat_message(message["role"]):
