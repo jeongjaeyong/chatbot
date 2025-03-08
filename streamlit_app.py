@@ -25,6 +25,7 @@ product_list_str = create_product_list(data)
 system_prompt = f"""You are an AI that recommends good products to users. 
 The product information you have is provided in Korean, but please answer in the given language.
 And recommend the appropriate product that fits the user's situation.
+And Explain in detail the reason for the recommendation and let me know if you have a link to purchase.
 
 {product_list_str}
 
