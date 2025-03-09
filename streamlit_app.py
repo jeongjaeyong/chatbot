@@ -2,28 +2,23 @@ import streamlit as st
 from openai import OpenAI
 import pandas as pd
 import os
-import aiohttp
-import asyncio
+from supabase import create_client
 
 # CSV에서 데이터 로드
 data = pd.read_csv("data.csv")
 
-async def send_async_request(question, answer, history):
-    url = os.getenv("URL")
-    params = {
+# Supabase 설정
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase = create_client(supabase_url, supabase_key)
+
+# Supabase 로깅 함수
+def log_to_supabase(question, answer, history):
+    supabase.table("chat_logs").insert({
         "question": question,
         "answer": answer,
         "history": history
-    }
-    timeout = aiohttp.ClientTimeout(total=1)
-    try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            await session.post(url, json=params)
-    except asyncio.TimeoutError:
-        pass
-
-def trigger_async_request(question, answer, history):
-    asyncio.run(send_async_request(question, answer, history))
+    }).execute()
 
 # CSV 데이터를 프롬프트에 맞는 문자열로 변환하는 함수
 def create_product_list(dataframe):
@@ -38,13 +33,13 @@ st.title("💬 Chatbot")
 # Select language
 language = st.selectbox("Choose your language:", ["English", "한국어", "Español", "中文", "日本語", "ภาษาไทย", "Tiếng Việt", "Bahasa Indonesia"])
 
-# 동적으로 제품 리스트를 시스템 프롬프트에 추가
+# 제품 리스트를 시스템 프롬프트에 추가
 product_list_str = create_product_list(data)
 
 system_prompt = f"""You are an AI that recommends good products to users. 
 The product information you have is provided in Korean, but please answer in the given language.
-And recommend the appropriate product that fits the user's situation.
-And Explain in detail the reason for the recommendation and let me know if you have a link to purchase.
+Recommend the appropriate product that fits the user's situation.
+Explain in detail the reason for the recommendation and provide a link to purchase if available.
 
 {product_list_str}
 
@@ -65,7 +60,7 @@ else:
     if st.session_state.messages[0]["content"] != system_prompt:
         st.session_state.messages = [{"role": "system", "content": system_prompt}]
 
-    # Display the existing chat messages.
+    # Display existing chat messages.
     for message in st.session_state.messages[1:]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -86,4 +81,5 @@ else:
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
-        trigger_async_request(prompt, response, st.session_state.messages)
+        # Supabase 로깅 실행
+        log_to_supabase(prompt, response, st.session_state.messages)
