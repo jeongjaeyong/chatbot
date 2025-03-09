@@ -3,7 +3,9 @@ from openai import OpenAI
 import pandas as pd
 import os
 from supabase import create_client
+from datetime import datetime
 import json
+
 # CSV에서 데이터 로드
 data = pd.read_csv("data.csv")
 
@@ -14,14 +16,17 @@ supabase = create_client(supabase_url, supabase_key)
 
 # Supabase 로깅 함수
 def log_to_supabase(question, answer, history):
-    # JSON 직렬화 명시적 수행
-    history_json = json.dumps(history, ensure_ascii=False)
-    supabase.table("chat_log").insert({
-        "question": question,
-        "answer": answer,
-        "history": history_json
-    }).execute()
-
+    try:
+        timestamp = datetime.now().isoformat()
+        supabase.table("chat_logs").insert({
+            "question": question,
+            "answer": answer,
+            "history": json.dumps(history, ensure_ascii=False),
+            "timestamp": timestamp
+        }).execute()
+    except:
+        pass
+        
 # CSV 데이터를 프롬프트에 맞는 문자열로 변환하는 함수
 def create_product_list(dataframe):
     products_info = "제품 리스트:\n"
