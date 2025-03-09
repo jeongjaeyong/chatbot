@@ -16,7 +16,7 @@ supabase = create_client(supabase_url, supabase_key)
 def log_to_supabase(question, answer, history):
     # JSON 직렬화 명시적 수행
     history_json = json.dumps(history, ensure_ascii=False)
-    supabase.table("chat_logs").insert({
+    supabase.table("chat_log").insert({
         "question": question,
         "answer": answer,
         "history": history_json
