@@ -18,7 +18,7 @@ supabase = create_client(supabase_url, supabase_key)
 def log_to_supabase(question, answer, history):
     try:
         timestamp = datetime.now().isoformat()
-        supabase.table("chat_logs").insert({
+        supabase.table("chat_log").insert({
             "question": question,
             "answer": answer,
             "history": json.dumps(history, ensure_ascii=False),
