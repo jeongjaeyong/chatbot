@@ -14,10 +14,12 @@ supabase = create_client(supabase_url, supabase_key)
 
 # Supabase 로깅 함수
 def log_to_supabase(question, answer, history):
+    # JSON 직렬화 명시적 수행
+    history_json = json.dumps(history, ensure_ascii=False)
     supabase.table("chat_logs").insert({
         "question": question,
         "answer": answer,
-        "history": history
+        "history": history_json
     }).execute()
 
 # CSV 데이터를 프롬프트에 맞는 문자열로 변환하는 함수
