@@ -3,7 +3,7 @@ from openai import OpenAI
 import pandas as pd
 import os
 from supabase import create_client
-
+import json
 # CSV에서 데이터 로드
 data = pd.read_csv("data.csv")
 
