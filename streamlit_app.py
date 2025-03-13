@@ -5,7 +5,7 @@ import os
 from supabase import create_client
 from datetime import datetime
 import json
-
+import copy
 # CSV에서 데이터 로드
 
 first_prompt = """
@@ -80,7 +80,47 @@ def routing(prompt, user_input, client):
     query_parsing = json.loads(response.choices[0].message.content)
     return query_parsing
 
+def generate_response(query_parsing, client, vector_id, messages):
+    response = ""
+    if "Task" not in query_parsing.keys():
+        response = "죄송합니다. 원하시는 내용을 제대로 이해하지 못했어요. 조금 더 구체적으로 알려주시면 감사하겠습니다."
 
+    if query_parsing["Task"] == "ReAsk":
+        response = "관심 있는 제품에 대해서 자세히(ex. 이름, 브랜드, 메이커) 알려주세요. 또는 원하시는 조건에 대해서 자세히(ex. 건성 피부용) 알려주세요"
+
+
+    if query_parsing["Task"] == "FindProduct":
+        if "Option" not in query_parsing.keys():
+            response = "죄송합니다. 원하시는 내용을 찾지 못했어요. 찾으시는 제품에 대해서서 명확하게 다시 알려주세요"
+
+        product = query_parsing['Option']["Product"]
+        product_list = supabase.table("cosmetics").select("*").execute().data
+
+        find_data = ""
+        for item in product_list:
+            if product in item["title"]:
+                find_data += f"item : {item['title']}\tbrand : {item['brand']}\tmake : {item['maker']}\tsummary : {item['summary']}\n\n"
+
+        messages[0]['content'] = response_prompt
+
+        if len(find_data)>2:
+            messages[-1]['content'] = messages[-1]['content'] +"\n\n<데이터>\n\n" + find_data +"\n\n</데이터>\n\n" + messages[-1]['content']
+            response = generate("gpt-4o", messages, client)
+
+        else:
+            if "brand" in query_parsing['Option'].keys() or "maker" in query_parsing['Option'].keys():
+                response = local_RAG("gpt-4o", messages, client, vector_id)
+                if response == "":
+                    response = generate("gpt-4o-search-preview", messages, client)
+            else:
+                response = generate("gpt-4o-search-preview", messages, client)
+
+    if query_parsing["Task"] == "Recommandation":
+        response = local_RAG("gpt-4o", messages, client, vector_id)
+        if response == "":
+            response = generate("gpt-4o-search-preview", messages, client)
+
+    return response
 # CSV 데이터를 프롬프트에 맞는 문자열로 변환하는 함수
 
 
@@ -128,7 +168,7 @@ else:
         with st.chat_message("user"):
             st.markdown(prompt)
         query_parsing = routing(first_prompt, user_prompt, client)
-        response = generate_response(query_parsing, client, vector_id, messages)
+        response = generate_response(query_parsing, client, vector_id, copy.deepcopy(messages))
 
         
         with st.chat_message("assistant"):
