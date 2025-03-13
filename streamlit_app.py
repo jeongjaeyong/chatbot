@@ -7,7 +7,26 @@ from datetime import datetime
 import json
 
 # CSV에서 데이터 로드
-data = pd.read_csv("data.csv")
+
+first_prompt = """
+너는 유저의 질문을 분석하는 AI야! 유저의 질문을 바탕으로 주어진 조건에 맞도록 질문을 분석해줘!
+
+조건 1. 아래 Task 리스트 중 1개의 작업 선택!
+Task : ["ReAsk", "FindProduct", "Recommandation", "Etc"]
+조건 2. 만약, Task가 "FindProduct"라면, 원하는 "Product"를 "Option"으로 정의를 해줘!
+조건 3. 만약, Task가 "Recommandation"라면, 유저의 조건을 "Condition"이라고 "Option"에 제공해줘!
+조건 4. 만약, Task가 "ReAsk"라면, 유저의 질문에서 추가적으로 요구되는 조건을 "Condition"이라고 "Option"에 제공해줘!
+** 조건 5. 화장품 관련 이야기를 제외한 다른 이야기는 답할 수 없다는 내용으로 답변을 해줘! **
+
+OUTPUT 포맷
+```json
+{
+    "Task":"...",
+    "Option":{"...":"...",  ..., key:val}
+}
+```
+"""
+
 
 # Supabase 설정
 supabase_url = os.getenv("SUPABASE_URL")
@@ -26,13 +45,44 @@ def log_to_supabase(question, answer, history):
         }).execute()
     except:
         pass
-        
+def local_RAG(model, messages, client, vector_id):
+    response = client.responses.create(
+        model=model,
+        input=messages[-1]['content'],
+        tools=[{
+                "type": "file_search",
+                "vector_store_ids": [vector_id],
+                "max_num_results": 5
+        }]
+        )
+    if response.output[0].results == None:
+        return ""
+    return response.output[1].content[0].text
+
+def generate(model, messages, client):
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+    )
+    return response.choices[0].message.content
+
+def routing(prompt, user_input, client):
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": user_input}
+    ]
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        response_format={"type": "json_object"}
+    )
+    query_parsing = json.loads(response.choices[0].message.content)
+    return query_parsing
+
+
 # CSV 데이터를 프롬프트에 맞는 문자열로 변환하는 함수
-def create_product_list(dataframe):
-    products_info = "제품 리스트:\n"
-    for idx, row in dataframe.iterrows():
-        products_info += f"제품:{row['제품']}\n기능:{row['기능']}\n비고:{row.get('비고', '정보 없음')}\n링크:{row.get('링크', '정보 없음')}\n\n\n"
-    return products_info
+
 
 # Show title and description.
 st.title("💬 Chatbot")
@@ -40,21 +90,21 @@ st.title("💬 Chatbot")
 # Select language
 language = st.selectbox("Choose your language:", ["English", "한국어", "Español", "中文", "日本語", "ภาษาไทย", "Tiếng Việt", "Bahasa Indonesia"])
 
-# 제품 리스트를 시스템 프롬프트에 추가
-product_list_str = create_product_list(data)
+response_prompt = f"""
+너는 화장품을 상담해 주는 AI야!
+유저의 화장품 관련된 질문에 가장 적절한 답변을 해줘!
 
-system_prompt = f"""You are an AI that recommends good products to users. 
-The product information you have is provided in Korean, but please answer in the given language.
-Recommend the appropriate product that fits the user's situation.
-Explain in detail the reason for the recommendation and provide a link to purchase if available.
+조건1 : 화장품과 관련되지 않은 질문에 대해서 대답을 하지 않도록 해줘
+조건2 : 주어진 language에 맞는 언어로 답변을 해줘!
+조건3 : 유저가 별도의 데이터를 제공하면(<데이터>...</데이터>로 제공), 제공된 데이터에서만 답변 해줘
 
-{product_list_str}
-
-답변 언어 : {language}
+language:{language}
 """
 
 # Ask user for their OpenAI API key.
 openai_api_key = os.getenv("OPENAI_API_KEY")
+vector_id = os.getenv("vector_id")
+
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
@@ -73,19 +123,16 @@ else:
             st.markdown(message["content"])
 
     # Chat input field
-    if prompt := st.chat_input("Enter your message:"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    if user_prompt := st.chat_input("Enter your message:"):
+        st.session_state.messages.append({"role": "user", "content": user_prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
+        query_parsing = routing(first_prompt, user_prompt, client)
+        response = generate_response(query_parsing, client, vector_id, messages)
 
-        stream = client.chat.completions.create(
-            model="gpt-4o-2024-08-06",
-            messages=st.session_state.messages,
-            stream=True,
-        )
-
+        
         with st.chat_message("assistant"):
-            response = st.write_stream(stream)
+            response = st.markdown(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         # Supabase 로깅 실행
