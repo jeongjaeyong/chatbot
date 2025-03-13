@@ -168,7 +168,7 @@ else:
         with st.chat_message("user"):
             st.markdown(user_prompt)
         query_parsing = routing(first_prompt, user_prompt, client)
-        response = generate_response(query_parsing, client, vector_id, copy.deepcopy(st.session_state.message))
+        response = generate_response(query_parsing, client, vector_id, copy.deepcopy(st.session_state['message']))
 
         
         with st.chat_message("assistant"):
