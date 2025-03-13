@@ -154,7 +154,7 @@ else:
         st.session_state.messages = [{"role": "system", "content": response_prompt}]
 
     # 언어 또는 데이터 변경 시 시스템 프롬프트 업데이트
-    if st.session_state.messages[0]["content"] != system_prompt:
+    if st.session_state.messages[0]["content"] != response_prompt:
         st.session_state.messages = [{"role": "system", "content": response_prompt}]
 
     # Display existing chat messages.
