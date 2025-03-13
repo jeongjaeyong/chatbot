@@ -166,13 +166,13 @@ else:
     if user_prompt := st.chat_input("Enter your message:"):
         st.session_state.messages.append({"role": "user", "content": user_prompt})
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(user_prompt)
         query_parsing = routing(first_prompt, user_prompt, client)
         response = generate_response(query_parsing, client, vector_id, copy.deepcopy(messages))
 
         
         with st.chat_message("assistant"):
-            response = st.markdown(stream)
+            response = st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         # Supabase 로깅 실행
