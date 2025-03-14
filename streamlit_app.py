@@ -66,12 +66,8 @@ def generate(model, messages, client):
     )
     return response.choices[0].message.content
 
-def routing(prompt, user_input, client):
-    messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": user_input}
-    ]
-
+def routing(messages, client):
+    messages[0]['content'] = first_prompt
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=messages,
@@ -167,7 +163,7 @@ else:
         st.session_state.messages.append({"role": "user", "content": user_prompt})
         with st.chat_message("user"):
             st.markdown(user_prompt)
-        query_parsing = routing(first_prompt, user_prompt, client)
+        query_parsing = routing(copy.deepcopy(st.session_state["messages"]), client)
         response = generate_response(query_parsing, client, vector_id, copy.deepcopy(st.session_state["messages"]))
 
         
