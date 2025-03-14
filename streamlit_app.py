@@ -82,7 +82,11 @@ def generate_response(query_parsing, client, vector_id, messages):
         response = "죄송합니다. 원하시는 내용을 제대로 이해하지 못했어요. 조금 더 구체적으로 알려주시면 감사하겠습니다."
 
     if query_parsing["Task"] == "ReAsk":
-        response = "관심 있는 제품에 대해서 자세히(ex. 이름, 브랜드, 메이커) 알려주세요. 또는 원하시는 조건에 대해서 자세히(ex. 건성 피부용) 알려주세요"
+        if "Option" in query_parsing.keys() and "Condition" in query_parsing["Option"]:
+            response = f"다음과 같은 정보가 추가적으로 필요합니다. {query_parsing['Option']['Condition']}"
+        
+        else:
+            response = "관심 있는 제품에 대해서 자세히(ex. 이름, 브랜드, 메이커) 알려주세요. 또는 원하시는 조건에 대해서 자세히(ex. 건성 피부용) 알려주세요"
 
 
     if query_parsing["Task"] == "FindProduct":
