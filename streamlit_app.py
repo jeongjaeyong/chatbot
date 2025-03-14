@@ -176,4 +176,4 @@ else:
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         # Supabase 로깅 실행
-        log_to_supabase(prompt, response, st.session_state.messages)
+        log_to_supabase(user_prompt, response, st.session_state.messages)
