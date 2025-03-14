@@ -168,7 +168,7 @@ else:
 
         
         with st.chat_message("assistant"):
-            response = st.markdown(response)
+            st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         # Supabase 로깅 실행
